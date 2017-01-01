@@ -12,7 +12,6 @@ The "hello world" example of interruptable actions.
 
 from action_process import ActionProcess
 from speak import Speak
-from speak_actively import SpeakActively
 
 def on_interrupt(action):
     global g_interrupted
