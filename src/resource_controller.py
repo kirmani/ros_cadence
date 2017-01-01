@@ -255,6 +255,17 @@ class ResourceController(PetriNet):
         for resource_listener in self.resource_listeners_:
             self.places_['free'].AddToken(resource_listener.name)
 
+    def SetBelief(self, belief, value):
+        self.beliefs_[belief] = value
+        print("SetBelief: %s -> %s" % (belief, value))
+        print(self.beliefs_)
+
+    def GetBelief(self, belief):
+        if belief not in self.beliefs_:
+            raise ValueError("GetBelief: Error: belief (%s) does not exist"
+                             % belief)
+        return self.beliefs_[belief]
+
     def AddTokenToPlace(self, place, token):
         if place not in self.places_:
             raise ValueError("Does not have place: %s" % place)
@@ -317,6 +328,13 @@ def handle_do_petri_net_arc(req):
         return DoPetriNetArcResponse(response)
     raise rospy.ServiceException("Invalid function input: %s" % req.function)
 
+def set_belief_handler(req):
+    resource_controller.SetBelief(req.belief, req.value)
+    return SetBeliefResponse()
+
+def get_belief_handler(req):
+    return GetBeliefResponse(resource_controller.GetBelief(req.belief))
+
 def OnShutdown():
     print('shutting down!')
 
@@ -334,6 +352,10 @@ def main():
 
     rospy.init_node('do_petri_net_arc')
     s = rospy.Service('do_petri_net_arc', DoPetriNetArc, handle_do_petri_net_arc)
+    set_belief_service = rospy.Service('set_belief', SetBelief,
+                                       set_belief_handler)
+    get_belief_service = rospy.Service('get_belief', GetBelief,
+                                       get_belief_handler)
     print("Ready to do petri net arcs.")
     rospy.on_shutdown(OnShutdown)
     rospy.spin()
