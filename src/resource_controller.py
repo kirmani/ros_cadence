@@ -116,64 +116,6 @@ class ActionProcessApi:
         except rospy.ServiceException, e:
             print("Service call failed: %s" % e)
 
-class ResourceControllerApi:
-    @staticmethod
-    def RemoveResourceFromPlace(place, token):
-        rospy.wait_for_service('do_petri_net_arc')
-        try:
-            do_petri_net_arc = rospy.ServiceProxy(
-                'do_petri_net_arc', DoPetriNetArc)
-            return do_petri_net_arc('remove', place, token, None).response
-        except rospy.ServiceException, e:
-            print("Service call failed: %s" % e)
-            return False
-
-    @staticmethod
-    def AddResourceToPlace(place, token):
-        rospy.wait_for_service('do_petri_net_arc')
-        try:
-            do_petri_net_arc = rospy.ServiceProxy(
-                'do_petri_net_arc', DoPetriNetArc)
-            return do_petri_net_arc('add', place, token, None).response
-        except rospy.ServiceException, e:
-            print("Service call failed: %s" % e)
-            return False
-
-    @staticmethod
-    def CheckGuard(place, token):
-        rospy.wait_for_service('do_petri_net_arc')
-        try:
-            do_petri_net_arc = rospy.ServiceProxy(
-                'do_petri_net_arc', DoPetriNetArc)
-            return do_petri_net_arc('guard', place, token, None).response
-        except rospy.ServiceException, e:
-            print("Service call failed: %s" % e)
-            return False
-
-    @staticmethod
-    def AddActiveAction(action):
-        rospy.wait_for_service('do_petri_net_arc')
-        try:
-            do_petri_net_arc = rospy.ServiceProxy(
-                'do_petri_net_arc', DoPetriNetArc)
-            return do_petri_net_arc(
-                'add_action', None, None, action).response
-        except rospy.ServiceException, e:
-            print("Service call failed: %s" % e)
-            return False
-
-    @staticmethod
-    def RemoveActiveAction(action):
-        rospy.wait_for_service('do_petri_net_arc')
-        try:
-            do_petri_net_arc = rospy.ServiceProxy(
-                'do_petri_net_arc', DoPetriNetArc)
-            return do_petri_net_arc(
-                'remove_action', None, None, action).response
-        except rospy.ServiceException, e:
-            print("Service call failed: %s" % e)
-            return False
-
 class ReleaseRobotTransition(PetriNetTransition):
     def __init__(self, requested_robot, owned_robot, free, beliefs):
         PetriNetTransition.__init__(self, 'release_robot')
@@ -431,53 +373,13 @@ class ResourceController(PetriNet):
 
     def RobotOwnsResource(self, resource):
         self.Run()
-        # print(self.GetMarking())
         return self.places_['owned_robot'].HasToken(resource)
-
-    # TODO(kirmani): Deprecate all these.
-    def AddTokenToPlace(self, place, token):
-        if place not in self.places_:
-            raise ValueError("Does not have place: %s" % place)
-        self.places_[place].AddToken(token)
-        self.Run()
-        if kDebug:
-            print("Marking after adding token (%s) to place (%s): %s"
-                  % (token, place, str(resource_controller.GetMarking())))
-
-    def HasTokenInPlace(self, place, token):
-        self.Run()
-        if place not in self.places_:
-            raise ValueError("Does not have place: %s" % place)
-        return self.places_[place].HasToken(token)
-
-    def RemoveTokenFromPlace(self, place, token):
-        if place not in self.places_:
-            raise ValueError("Does not have place: %s" % place)
-        remove_successful = self.places_[place].RemoveToken(token)
-        self.Run()
-        if kDebug:
-            print("Marking after removing token (%s) to place (%s): %s"
-                  % (token, place, str(resource_controller.GetMarking())))
-        return remove_successful
 
     def GetMarking(self):
         marking = {}
         for place in self.places_:
             marking[place] = self.places_[place].GetTokens()
         return marking
-
-    def AddActiveAction(self, action):
-        if kDebug:
-            print("Adding active action: %s" % action)
-        self.actions_.add(action)
-
-    def RemoveActiveAction(self, action):
-        if kDebug:
-            print("Removing active action: %s" % action)
-        if action not in self.actions_:
-            return False
-        self.actions_.remove(action)
-        return True
 
 def handle_do_petri_net_arc(req):
     if req.function == 'add':

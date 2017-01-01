@@ -10,8 +10,6 @@
 PyAudio Test
 """
 
-# from petri_net import *
-# from resource_controller import ResourceControllerApi
 from collections import deque
 from resource_listener import ResourceListener
 from sampler import Sampler

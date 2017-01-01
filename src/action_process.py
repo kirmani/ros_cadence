@@ -4,7 +4,6 @@ from petri_net import PetriNet
 from petri_net import PetriNetPlace
 from petri_net import PetriNetTransition
 from resource_controller import ActionProcessApi
-# from resource_controller import ResourceControllerApi
 import rospy
 
 class StartTransition(PetriNetTransition):
@@ -88,50 +87,12 @@ class FinishTransition(PetriNetTransition):
 
     # Removing the intended action.
     ActionProcessApi.RemoveIntendedAction(self.action_.name)
-    # ResourceControllerApi.RemoveActiveAction(self.action_.name)
 
 
   def activated(self):
     return self.action_.IsFinished() and \
         (self.started_.HasToken(self.action_.name) \
         or self.interrupted_.HasToken(self.action_.name))
-
-# class SeizeRobotTransition(PetriNetTransition):
-#   def __init__(self, name, action):
-#     PetriNetTransition.__init__(self, name)
-#     self.action_ = action
-# 
-#   def fire(self):
-#     for resource in self.action_.preconditions:
-#       if (ResourceControllerApi.CheckGuard('requested_robot', resource)
-#               and ResourceControllerApi.CheckGuard('free', resource)):
-#         ResourceControllerApi.RemoveResourceFromPlace('free', resource)
-#         ResourceControllerApi.AddResourceToPlace('owned_robot', resource)
-# 
-#   def activated(self):
-#     for resource in self.action_.preconditions:
-#       if (ResourceControllerApi.CheckGuard('requested_robot', resource)
-#               and ResourceControllerApi.CheckGuard('free', resource)):
-#         return True
-#     return False
-
-# class RequestRobotTransition(PetriNetTransition):
-#   def __init__(self, action):
-#     PetriNetTransition.__init__(self, 'request_robot')
-#     self.action_ = action
-#     self.already_requested_ = False
-# 
-#   def fire(self):
-#     # Place resource tokens in requested place.
-#     print("Requesting resources for action: %s" % self.action_.name)
-#     for resource in self.action_.preconditions:
-#       ResourceControllerApi.AddResourceToPlace('requested_robot', resource)
-# 
-#   def activated(self):
-#     if not self.already_requested_:
-#       self.already_requested_ = True
-#       return True
-#     return False
 
 class ActionProcess(PetriNet):
   def __init__(self, name, action):
@@ -145,9 +106,7 @@ class ActionProcess(PetriNet):
     self.finished_ = PetriNetPlace('finished')
 
     # Transitions.
-    # self.transitions_.append(RequestRobotTransition(action))
     self.transitions_.append(StartTransition('start', action, queue, started))
-    # self.transitions_.append(SeizeRobotTransition('seize_robot', action))
     self.transitions_.append(
         InterruptTransition('interrupt', action, started, interrupted))
     self.transitions_.append(
