@@ -14,7 +14,6 @@ from floor_listener import FloorListener
 
 from ros_cadence.srv import *
 from petri_net import *
-from sets import Set
 import rospy
 
 kVerbose = True
@@ -270,7 +269,6 @@ class ResourceController(PetriNet):
         self.places_ = {}
         self.intended_resources_ = []
         self.intended_actions_ = []
-        self.actions_ = Set()
         self.beliefs_ = {}
 
         # Places.
@@ -434,9 +432,6 @@ def robot_owns_resource_handler(req):
     return GetBeliefResponse(
         resource_controller.RobotOwnsResource(req.belief))
 
-def OnShutdown():
-    print('shutting down!')
-
 def main():
     global resource_controller
 
@@ -471,7 +466,6 @@ def main():
         robot_owns_resource_handler)
 
     print("Ready to do petri net arcs.")
-    rospy.on_shutdown(OnShutdown)
     rospy.spin()
 
 if __name__ == '__main__':
