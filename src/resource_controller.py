@@ -12,7 +12,7 @@ Timed Petri net for resource controller.
 
 from floor_listener import FloorListener
 
-from hlpr_cadence.srv import *
+from ros_cadence.srv import *
 from petri_net import *
 from sets import Set
 import rospy
