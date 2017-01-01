@@ -390,19 +390,24 @@ class ResourceController(PetriNet):
         print("AddIntendedAction: added intended action (%s)"
               % action)
         print(self.intended_actions_)
+        self.Run()
+        print(self.GetMarking())
 
     def RemoveIntendedAction(self, action):
         self.intended_actions_.remove(action)
         print("RemoveIntendedAction: removed intended action (%s)"
               % action)
         print(self.intended_actions_)
-
+        self.Run()
+        print(self.GetMarking())
 
     def AddIntendedResource(self, resource):
         self.intended_resources_.append(resource)
         print("AddIntendedResource: added intended resource (%s)"
               % resource)
         print(self.intended_resources_)
+        self.Run()
+        print(self.GetMarking())
 
     def RemoveIntendedResource(self, resource):
         self.intended_resources_.remove(resource)
@@ -414,17 +419,19 @@ class ResourceController(PetriNet):
         self.places_['requested_robot'].AddToken(resource)
         print("AddRequestedResource: added requested resource (%s)"
               % resource)
-        print(self.places_['requested_robot'].tokens_)
+        self.Run()
+        print(self.GetMarking())
 
     def RemoveRequestedResource(self, resource):
         self.places_['requested_robot'].RemoveToken(resource)
         print("RemoveRequestedResource: removed requested resource (%s)"
               % resource)
-        print(self.places_['requested_robot'].tokens_)
+        self.Run()
+        print(self.GetMarking())
 
     def RobotOwnsResource(self, resource):
         self.Run()
-        print(self.GetMarking())
+        # print(self.GetMarking())
         return self.places_['owned_robot'].HasToken(resource)
 
     # TODO(kirmani): Deprecate all these.
@@ -463,7 +470,6 @@ class ResourceController(PetriNet):
         if kDebug:
             print("Adding active action: %s" % action)
         self.actions_.add(action)
-        # self.SetBelief('action_active_' + action, True)
 
     def RemoveActiveAction(self, action):
         if kDebug:
@@ -471,7 +477,6 @@ class ResourceController(PetriNet):
         if action not in self.actions_:
             return False
         self.actions_.remove(action)
-        # self.SetBelief('action_active_' + action, True)
         return True
 
 def handle_do_petri_net_arc(req):
