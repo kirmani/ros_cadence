@@ -40,10 +40,81 @@ class BeliefControllerApi:
         try:
             get_belief = rospy.ServiceProxy(
                 'get_belief', DoPetriNetArc)
-            return get_belief(belief)
+            return get_belief(belief).value
         except rospy.ServiceException, e:
             print("Service call failed: %s" % e)
             return False
+
+class ActionProcessApi:
+    @staticmethod
+    def AddIntendedAction(action):
+        rospy.wait_for_service('add_intended_action')
+        try:
+            add_intended_action = rospy.ServiceProxy(
+                'add_intended_action', Resource)
+            add_intended_action(action)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def RemoveIntendedAction(action):
+        rospy.wait_for_service('remove_intended_action')
+        try:
+            remove_intended_action = rospy.ServiceProxy(
+                'remove_intended_action', Resource)
+            remove_intended_action(action)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def AddIntendedResource(resource):
+        rospy.wait_for_service('add_intended_resource')
+        try:
+            add_intended_resource = rospy.ServiceProxy(
+                'add_intended_resource', Resource)
+            add_intended_resource(resource)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def RemoveIntendedResource(resource):
+        rospy.wait_for_service('remove_intended_resource')
+        try:
+            remove_intended_resource = rospy.ServiceProxy(
+                'remove_intended_resource', Resource)
+            remove_intended_resource(resource)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def AddRequestedResource(resource):
+        rospy.wait_for_service('add_requested_resource')
+        try:
+            add_requested_resource = rospy.ServiceProxy(
+                'add_requested_resource', Resource)
+            add_requested_resource(resource)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def RemoveRequestedResource(resource):
+        rospy.wait_for_service('remove_requested_resource')
+        try:
+            remove_requested_resource = rospy.ServiceProxy(
+                'remove_requested_resource', Resource)
+            remove_requested_resource(resource)
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
+
+    @staticmethod
+    def RobotOwnsResource(resource):
+        rospy.wait_for_service('robot_owns_resource')
+        try:
+            robot_owns_resource = rospy.ServiceProxy(
+                'robot_owns_resource', GetBelief)
+            return robot_owns_resource(resource).value
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
 
 class ResourceControllerApi:
     @staticmethod
@@ -229,10 +300,34 @@ class ReleaseUserTransition(PetriNetTransition):
                 return True
         return False
 
+class SeizeRobotTransition(PetriNetTransition):
+    def __init__(self, requested_robot, free, owned_robot, intended_resources):
+        PetriNetTransition.__init__(self, 'seize_robot')
+        self.requested_robot_ = requested_robot
+        self.free_ = free
+        self.owned_robot_ = owned_robot
+        self.intended_resources_ = intended_resources
+
+    def fire(self):
+        for resource in self.intended_resources_:
+            if (self.requested_robot_.HasToken(resource)
+                and self.free_.HasToken(resource)):
+                self.free_.RemoveToken(resource)
+                self.owned_robot_.AddToken(resource)
+
+    def activated(self):
+        for resource in self.intended_resources_:
+            if (self.requested_robot_.HasToken(resource)
+                and self.free_.HasToken(resource)):
+                return True
+        return False
+
 class ResourceController(PetriNet):
     def __init__(self):
         PetriNet.__init__(self, 'resource_controller')
         self.places_ = {}
+        self.intended_resources_ = []
+        self.intended_actions_ = []
         self.actions_ = Set()
         self.beliefs_ = {}
 
@@ -241,6 +336,11 @@ class ResourceController(PetriNet):
             self.places_[place] = PetriNetPlace(place)
 
         # Transitions.
+        self.transitions_.append(
+            SeizeRobotTransition(self.places_['requested_robot'],
+                                 self.places_['free'],
+                                 self.places_['owned_robot'],
+                                 self.intended_resources_))
         self.transitions_.append(
             ReleaseRobotTransition(self.places_['requested_robot'],
                                    self.places_['owned_robot'],
@@ -266,12 +366,14 @@ class ResourceController(PetriNet):
                                   self.places_['free'],
                                   self.beliefs_))
 
+    # Perception Process API.
     def SetBelief(self, belief, value):
         if belief not in self.beliefs_:
             if value:
                 self.places_['free'].AddToken(belief)
             else:
                 self.places_['owned_user'].AddToken(belief)
+            print(self.GetMarking())
         self.beliefs_[belief] = value
         print("SetBelief: %s -> %s" % (belief, value))
         print(self.beliefs_)
@@ -282,6 +384,50 @@ class ResourceController(PetriNet):
                              % belief)
         return self.beliefs_[belief]
 
+    # Action Process API.
+    def AddIntendedAction(self, action):
+        self.intended_actions_.append(action)
+        print("AddIntendedAction: added intended action (%s)"
+              % action)
+        print(self.intended_actions_)
+
+    def RemoveIntendedAction(self, action):
+        self.intended_actions_.remove(action)
+        print("RemoveIntendedAction: removed intended action (%s)"
+              % action)
+        print(self.intended_actions_)
+
+
+    def AddIntendedResource(self, resource):
+        self.intended_resources_.append(resource)
+        print("AddIntendedResource: added intended resource (%s)"
+              % resource)
+        print(self.intended_resources_)
+
+    def RemoveIntendedResource(self, resource):
+        self.intended_resources_.remove(resource)
+        print("RemoveIntendedResource: removed intended resource (%s)"
+              % resource)
+        print(self.intended_resources_)
+
+    def AddRequestedResource(self, resource):
+        self.places_['requested_robot'].AddToken(resource)
+        print("AddRequestedResource: added requested resource (%s)"
+              % resource)
+        print(self.places_['requested_robot'].tokens_)
+
+    def RemoveRequestedResource(self, resource):
+        self.places_['requested_robot'].RemoveToken(resource)
+        print("RemoveRequestedResource: removed requested resource (%s)"
+              % resource)
+        print(self.places_['requested_robot'].tokens_)
+
+    def RobotOwnsResource(self, resource):
+        self.Run()
+        print(self.GetMarking())
+        return self.places_['owned_robot'].HasToken(resource)
+
+    # TODO(kirmani): Deprecate all these.
     def AddTokenToPlace(self, place, token):
         if place not in self.places_:
             raise ValueError("Does not have place: %s" % place)
@@ -353,6 +499,34 @@ def set_belief_handler(req):
 def get_belief_handler(req):
     return GetBeliefResponse(resource_controller.GetBelief(req.belief))
 
+def add_intended_action_handler(req):
+    resource_controller.AddIntendedAction(req.resource)
+    return ResourceResponse()
+
+def remove_intended_action_handler(req):
+    resource_controller.RemoveIntendedAction(req.resource)
+    return ResourceResponse()
+
+def add_intended_resource_handler(req):
+    resource_controller.AddIntendedResource(req.resource)
+    return ResourceResponse()
+
+def remove_intended_resource_handler(req):
+    resource_controller.RemoveIntendedResource(req.resource)
+    return ResourceResponse()
+
+def add_requested_resource_handler(req):
+    resource_controller.AddRequestedResource(req.resource)
+    return ResourceResponse()
+
+def remove_requested_resource_handler(req):
+    resource_controller.RemoveRequestedResource(req.resource)
+    return ResourceResponse()
+
+def robot_owns_resource_handler(req):
+    return GetBeliefResponse(
+        resource_controller.RobotOwnsResource(req.belief))
+
 def OnShutdown():
     print('shutting down!')
 
@@ -365,10 +539,30 @@ def main():
 
     rospy.init_node('do_petri_net_arc')
     s = rospy.Service('do_petri_net_arc', DoPetriNetArc, handle_do_petri_net_arc)
-    set_belief_service = rospy.Service('set_belief', SetBelief,
-                                       set_belief_handler)
-    get_belief_service = rospy.Service('get_belief', GetBelief,
-                                       get_belief_handler)
+
+    # TODO(kirmani): Rename Resource.srv to String.srv
+    # TODO(kirmani): Rename GetBelief.srv to StringBool.srv or something
+    # better.
+    set_belief_service = rospy.Service(
+        'set_belief', SetBelief, set_belief_handler)
+    get_belief_service = rospy.Service(
+        'get_belief', GetBelief, get_belief_handler)
+    add_intended_action_service = rospy.Service(
+        'add_intended_action', Resource, add_intended_action_handler)
+    remove_intended_action_service = rospy.Service(
+        'remove_intended_action', Resource, remove_intended_action_handler)
+    add_intended_resource_service = rospy.Service(
+        'add_intended_resource', Resource, add_intended_resource_handler)
+    remove_intended_resource_service = rospy.Service(
+        'remove_intended_resource', Resource, remove_intended_resource_handler)
+    add_requested_resource_service = rospy.Service(
+        'add_requested_resource', Resource, add_requested_resource_handler)
+    remove_requested_resource_service = rospy.Service(
+        'remove_requested_resource', Resource, remove_requested_resource_handler)
+    robot_owns_resource_service = rospy.Service(
+        'robot_owns_resource', GetBelief,
+        robot_owns_resource_handler)
+
     print("Ready to do petri net arcs.")
     rospy.on_shutdown(OnShutdown)
     rospy.spin()

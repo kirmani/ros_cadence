@@ -56,6 +56,7 @@ add_service_files(
   FILES
   SetBelief.srv
   GetBelief.srv
+  Resource.srv
   DoPetriNetArc.srv
 )
 
