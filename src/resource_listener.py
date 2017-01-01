@@ -10,17 +10,17 @@
 Resource listener.
 """
 class ResourceListener:
-  def __init__(self, name):
-    self.name = name
+    def __init__(self, name):
+        self.name = name
 
-  def StartListening(self, actions):
-    pass
+    def StartListening(self, actions):
+        pass
 
-  def Poll(self):
-    """
-    Return True when object is 'free', False otherwise
-    """
-    return False
+    def Poll(self):
+        """
+        Return True when object is 'free', False otherwise
+        """
+        return False
 
-  def OnShutdown(self):
-    pass
+    def OnShutdown(self):
+        pass
